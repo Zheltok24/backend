@@ -1,0 +1,67 @@
+services:
+  web:
+    build: ./myapp
+    image: web:1.0.0
+    container_name: web
+    command: python manage.py runserver 0.0.0.0:8000
+    ports:
+      - 127.0.0.1:8000:8000
+    develop:
+      watch:
+        - action: sync
+          path: ./myapp
+          target: /usr/src/myapp
+          ignore:
+            - node_modules/
+            - venv/
+        - action: rebuild
+          path: ./myapp/requirements.txt
+        - action: rebuild
+          path: ./myapp/entrypoint.sh
+    restart: unless-stopped
+    env_file:
+      - ./myapp/.env.dev
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16-bookworm
+    container_name: db
+    volumes:
+      - data:/var/lib/postgresql/data/
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=django
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=store
+
+  dbbrowser:
+    image: adminer
+    container_name: adminer
+    ports:
+      - 8080:8080
+    depends_on:
+      - db
+
+  api:
+    build: ./api
+    image: api:1.0.0
+    container_name: api
+    command: python manage.py runserver 0.0.0.0:8000
+    ports:
+      - 127.0.0.1:9000:8000
+    env_file:
+      - ./api/.env.dev
+    develop:
+      watch:
+        - action: sync
+          path: ./api
+          target: /usr/src/myapp
+        - action: rebuild
+          path: ./api/requirements.txt
+    restart: unless-stopped
+    depends_on:
+      - db
+
+volumes:
+  data:

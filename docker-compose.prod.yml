@@ -1,0 +1,60 @@
+services:
+  web:
+    build:
+      context: ./myapp
+      dockerfile: Dockerfile.prod
+    image: web_prod:1.0.0
+    command: gunicorn app.wsgi:application --bind 0.0.0.0:8000 --access-logfile '-'
+    expose:
+      - 8000
+    restart: unless-stopped
+    env_file:
+      - ./myapp/.env.prod
+    depends_on:
+      - db
+    volumes:
+      - static_volume:/usr/src/myapp/static
+      - media_volume:/usr/src/myapp/media
+
+  db:
+    image: postgres:16-bookworm
+    volumes:
+      - data:/var/lib/postgresql/data/
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=django
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=store
+
+  nginx:
+    image: nginx:alpine-slim
+    volumes:
+      - ./conf.d:/etc/nginx/conf.d
+      - static_volume:/app/static
+      - static_api_volume:/app/api-static
+      - media_volume:/app/media
+    ports:
+      - 8005:80
+    depends_on:
+      - web
+
+  api:
+    build: ./api
+    image: api_prod:1.0.0
+    command: gunicorn app.wsgi:application --bind 0.0.0.0:8001 --access-logfile '-'
+    expose:
+      - 8001
+    env_file:
+      - ./api/.env.prod
+    volumes:
+      - static_api_volume:/usr/src/myapp/static
+      - media_volume:/usr/src/myapp/media
+    restart: unless-stopped
+    depends_on:
+      - db
+
+volumes:
+  data:
+  static_volume:
+  static_api_volume:
+  media_volume:

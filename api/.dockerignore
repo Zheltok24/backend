@@ -1,0 +1,12 @@
+.vs_code
+.idea
+
+venv/
+node_modules/
+media/
+sets/
+
+Dockerfile
+Dockerfile.prod
+.env.dev
+.env.prod
